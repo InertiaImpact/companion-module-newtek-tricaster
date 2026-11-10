@@ -1,3 +1,12 @@
+import {
+	audioTargets,
+	audioTargetOptions,
+	resolveAudioTarget,
+	audioSwitchProperties,
+	audioStateIsOn,
+	audioStateIsKnown,
+} from './audio.js'
+
 export function getActions() {
 	let transitionOptions = [
 		{ id: 'none', label: 'No Change' },
@@ -297,14 +306,7 @@ export function getActions() {
 					label: 'Choice',
 					type: 'dropdown',
 					id: 'source',
-					choices: [
-						{ id: 'ddr1', label: 'DDR 1' },
-						{ id: 'ddr2', label: 'DDR 2' },
-						{ id: 'ddr3', label: 'DDR 3' },
-						{ id: 'ddr4', label: 'DDR 4' },
-						{ id: 'sound', label: 'Sound' },
-						{ id: 'effects', label: 'Effects' },
-					],
+					choices: audioTargets,
 					default: 'ddr1',
 				},
 				{
@@ -327,14 +329,7 @@ export function getActions() {
 					label: 'Choice',
 					type: 'dropdown',
 					id: 'source',
-					choices: [
-						{ id: 'ddr1', label: 'DDR 1' },
-						{ id: 'ddr2', label: 'DDR 2' },
-						{ id: 'ddr3', label: 'DDR 3' },
-						{ id: 'ddr4', label: 'DDR 4' },
-						{ id: 'sound', label: 'Sound' },
-						{ id: 'effects', label: 'Effects' },
-					],
+					choices: audioTargets,
 					default: 'ddr1',
 				},
 				{
@@ -350,6 +345,85 @@ export function getActions() {
 			],
 			callback: (action) => {
 				this.sendCommand(`${action.options.source}_mute`, `${action.options.mute}`)
+			},
+		},
+		audio_adjust: {
+			name: 'Audio: Adjust volume',
+			options: [
+				...audioTargetOptions,
+				{
+					type: 'textinput',
+					id: 'amount',
+					label: 'Change in dB (negative decreases)',
+					default: '1',
+					useVariables: true,
+				},
+			],
+			callback: async (action, context) => {
+				const target = await resolveAudioTarget(action.options, context, this)
+				const raw = await context.parseVariablesInString(String(action.options.amount))
+				const amount = Number(raw)
+				if (target && raw.trim() && Number.isFinite(amount)) this.sendCommand(`${target}_adjust_volume`, String(amount))
+				else if (!raw.trim() || !Number.isFinite(amount)) this.log('warn', 'Invalid audio volume adjustment')
+			},
+		},
+		audio_set_volume: {
+			name: 'Audio: Set volume',
+			options: [
+				...audioTargetOptions,
+				{ type: 'textinput', id: 'volume', label: 'Volume in dB', default: '0', useVariables: true },
+			],
+			callback: async (action, context) => {
+				const target = await resolveAudioTarget(action.options, context, this)
+				const raw = await context.parseVariablesInString(String(action.options.volume))
+				const volume = Number(raw)
+				if (target && raw.trim() && Number.isFinite(volume)) this.sendCommand(`${target}_volume`, String(volume))
+				else if (!raw.trim() || !Number.isFinite(volume)) this.log('warn', 'Invalid audio volume')
+			},
+		},
+		audio_switch: {
+			name: 'Audio: Mute, solo or talkback',
+			options: [
+				...audioTargetOptions,
+				{
+					type: 'dropdown',
+					id: 'property',
+					label: 'Control',
+					default: 'mute',
+					choices: [
+						{ id: 'mute', label: 'Mute' },
+						{ id: 'solo', label: 'Solo' },
+						{ id: 'talk', label: 'Talk' },
+						{ id: 'skype_talkback', label: 'Skype Talkback' },
+					],
+				},
+				{
+					type: 'dropdown',
+					id: 'operation',
+					label: 'Operation',
+					default: 'toggle',
+					choices: [
+						{ id: 'true', label: 'On' },
+						{ id: 'false', label: 'Off' },
+						{ id: 'toggle', label: 'Toggle' },
+					],
+				},
+			],
+			callback: async (action, context) => {
+				const target = await resolveAudioTarget(action.options, context, this)
+				if (!target) return
+				const property = action.options.property
+				if (!audioSwitchProperties.includes(property)) return
+				let value = action.options.operation
+				if (value === 'toggle') {
+					const current = this.shortcut_states[`${target}_${property}`]
+					if (!audioStateIsKnown(current)) {
+						this.log('warn', `Cannot toggle ${target} ${property}: state is unknown`)
+						return
+					}
+					value = audioStateIsOn(current) ? 'false' : 'true'
+				}
+				if (value === 'true' || value === 'false') this.sendCommand(`${target}_${property}`, value)
 			},
 		},
 		load_save_v: {

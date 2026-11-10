@@ -1,3 +1,4 @@
+import { audioTargets } from './audio.js'
 import { combineRgb } from '@companion-module/base'
 
 export function getPresets() {
@@ -5,7 +6,6 @@ export function getPresets() {
 	const ColorBlack = combineRgb(0, 0, 0)
 	const ColorRed = combineRgb(200, 0, 0)
 	const ColorGreen = combineRgb(0, 200, 0)
-	const ColorOrange = combineRgb(255, 102, 0)
 
 	let presets = {}
 
@@ -395,5 +395,62 @@ export function getPresets() {
 		}
 	})
 
+	for (const target of audioTargets) {
+		const source = target.id
+		const category = `Audio: ${target.label}`
+		const button = (name, action, feedback, rotary) => ({
+			type: 'button',
+			category,
+			name,
+			options: { rotaryActions: Boolean(rotary) },
+			style: { text: `${target.label}\n${name}`, size: '14', color: ColorWhite, bgcolor: ColorBlack },
+			steps: [{ down: action ? [action] : [], up: [], ...(rotary || {}) }],
+			feedbacks: feedback
+				? [
+						{
+							feedbackId: 'audio_state',
+							options: { source, property: feedback },
+							style: { bgcolor: ColorRed, color: ColorWhite },
+						},
+					]
+				: [],
+		})
+		for (const [property, label] of [
+			['mute', 'Mute'],
+			['solo', 'Solo'],
+			['talk', 'Talk'],
+			['skype_talkback', 'Skype Talkback'],
+		]) {
+			for (const [operation, suffix] of [
+				['true', 'On'],
+				['false', 'Off'],
+				['toggle', 'Toggle'],
+			]) {
+				presets[`audio_${source}_${property}_${operation}`] = button(
+					`${label} ${suffix}`,
+					{ actionId: 'audio_switch', options: { source, property, operation } },
+					property,
+				)
+			}
+		}
+		for (const [amount, label] of [
+			['-1', 'Volume Down'],
+			['1', 'Volume Up'],
+		]) {
+			presets[`audio_${source}_volume_${amount === '1' ? 'up' : 'down'}`] = button(label, {
+				actionId: 'audio_adjust',
+				options: { source, amount },
+			})
+		}
+		presets[`audio_${source}_volume_rotary`] = button(
+			`Volume $(${this.label}:audio_${source}_volume) dB`,
+			{ actionId: 'audio_switch', options: { source, property: 'mute', operation: 'toggle' } },
+			'mute',
+			{
+				rotate_left: [{ actionId: 'audio_adjust', options: { source, amount: '-1' } }],
+				rotate_right: [{ actionId: 'audio_adjust', options: { source, amount: '1' } }],
+			},
+		)
+	}
 	return presets
 }

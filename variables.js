@@ -1,3 +1,5 @@
+import { audioTargets, audioProperties } from './audio.js'
+
 export function getVariables() {
 	const variables = []
 
@@ -51,5 +53,13 @@ export function getVariables() {
 		})
 	}
 
+	for (const target of audioTargets) {
+		for (const property of audioProperties) {
+			variables.push({
+				variableId: `audio_${target.id}_${property}`,
+				name: `Audio ${target.label} ${property.replaceAll('_', ' ')}`,
+			})
+		}
+	}
 	return variables
 }

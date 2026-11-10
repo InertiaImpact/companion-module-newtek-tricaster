@@ -57,3 +57,13 @@ This module allows you to control the Tricaster line of video production switche
 - Auto
 - Record Toggle
 - Streaming
+
+## Audio controls
+
+Audio actions cover the targets listed in the TriCaster shortcut dictionary: inputs 1�44, DDR 1�4, Sound, Effects, Master, Aux 1�3, Phones, Stream, Stream Main, Stream Aux, Talkback, DDR, Stills, and Titles. Available targets and controls depend on the TriCaster and session.
+
+Use **Audio: Set volume** or **Audio: Adjust volume** for levels in dB. A negative adjustment decreases the volume. **Audio: Mute, solo or talkback** offers on, off and toggle for mute, solo, Talk and Skype Talkback. Toggle requires the current state from the TriCaster; it does nothing when that state is unknown. The original Set volume and Mute audio actions remain available for existing configurations.
+
+Select **Use variable or target name** to enter a target such as `input1` or a Companion variable that resolves to one. Volume and adjustment fields also accept variables. Audio feedbacks indicate switch states or compare volume with a chosen level. Variables named `audio_<target>_volume`, `audio_<target>_mute`, `audio_<target>_solo`, `audio_<target>_talk`, and `audio_<target>_skype_talkback` contain values reported by the TriCaster. Unsupported states remain unavailable until reported.
+
+Each target has mute, solo and talkback presets, volume up/down presets, and a volume/mute rotary preset. Rotate left or right to adjust by 1 dB and press to toggle mute. The rotary preset displays the reported volume.

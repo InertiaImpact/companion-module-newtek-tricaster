@@ -1,3 +1,4 @@
+import { audioStateNames } from './audio.js'
 import { InstanceBase, runEntrypoint } from '@companion-module/base'
 import { getActions } from './actions.js'
 import { getPresets } from './presets.js'
@@ -374,8 +375,10 @@ class TricasterInstance extends InstanceBase {
 		}
 
 		this.ws = new WebSocket(`ws://${this.config.host}/v1/change_notifications`)
+		const socket = this.ws
 
 		this.ws.on('open', () => {
+			this.sendGetRequest('dictionary?key=shortcut_states')
 			// ping server every 15 seconds to keep connection open
 			this.websocketPing = setInterval(() => {
 				if (this.ws) {
@@ -401,6 +404,14 @@ class TricasterInstance extends InstanceBase {
 		})
 
 		this.ws.on('close', (code) => {
+			if (this.ws !== socket) return
+			const cleared = {}
+			for (const name of audioStateNames) {
+				delete this.shortcut_states[name]
+				cleared[`audio_${name}`] = undefined
+			}
+			this.setVariableValues(cleared)
+			this.checkFeedbacks('audio_state', 'audio_volume')
 			if (code !== 1000) {
 				this.reconnect = setInterval(() => {
 					this.initWebsocket()
@@ -569,7 +580,14 @@ class TricasterInstance extends InstanceBase {
 			}
 			this.initActions()
 		} else if (data.shortcut_states) {
+			const audioValues = {}
+			let audioChanged = false
 			data.shortcut_states?.shortcut_state.forEach((state) => {
+				if (audioStateNames.has(state.name)) {
+					this.shortcut_states[state.name] = state.value
+					audioValues[`audio_${state.name}`] = state.value
+					audioChanged = true
+				}
 				if (state.name.match(/_short_name/)) {
 					let input = this.inputs.find((x) => x.inputName == state.name.replace('_short_name', ''))
 					if (input) {
@@ -612,6 +630,10 @@ class TricasterInstance extends InstanceBase {
 					this.shortcut_states[`${state.name}`] = selected
 				}
 			})
+			if (audioChanged) {
+				this.setVariableValues(audioValues)
+				this.checkFeedbacks('audio_state', 'audio_volume')
+			}
 		} else if (data.datalink_values) {
 			if (this.datalink.length !== data.datalink_values.data.length) {
 				this.datalink = data.datalink_values.data
@@ -624,11 +646,8 @@ class TricasterInstance extends InstanceBase {
 				updatedVariables[`${name}`] = element.value
 			})
 			this.setVariableValues(updatedVariables)
-		} else {
 		}
 	}
-
-	checkDelegateStatus(current, v, item) {}
 }
 
 runEntrypoint(TricasterInstance, upgradeScripts)

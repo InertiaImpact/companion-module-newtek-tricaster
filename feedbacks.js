@@ -1,3 +1,4 @@
+import { audioTargetOptions, resolveAudioTarget, audioStateIsOn } from './audio.js'
 import { combineRgb } from '@companion-module/base'
 
 export function getFeedbacks() {
@@ -116,5 +117,66 @@ export function getFeedbacks() {
 		},
 	}
 
+	feedbacks.audio_state = {
+		type: 'boolean',
+		name: 'Audio: Mute, solo or talkback active',
+		defaultStyle: { bgcolor: ColorRed },
+		options: [
+			...audioTargetOptions,
+			{
+				type: 'dropdown',
+				id: 'property',
+				label: 'Control',
+				default: 'mute',
+				choices: [
+					{ id: 'mute', label: 'Mute' },
+					{ id: 'solo', label: 'Solo' },
+					{ id: 'talk', label: 'Talk' },
+					{ id: 'skype_talkback', label: 'Skype Talkback' },
+				],
+			},
+		],
+		callback: async (feedback, context) => {
+			const target = await resolveAudioTarget(feedback.options, context, this)
+			return target ? audioStateIsOn(this.shortcut_states[`${target}_${feedback.options.property}`]) : false
+		},
+	}
+	feedbacks.audio_volume = {
+		type: 'boolean',
+		name: 'Audio: Volume comparison',
+		defaultStyle: { bgcolor: ColorGreen },
+		options: [
+			...audioTargetOptions,
+			{
+				type: 'dropdown',
+				id: 'comparison',
+				label: 'Comparison',
+				default: 'gte',
+				choices: [
+					{ id: 'gte', label: 'At or above' },
+					{ id: 'lte', label: 'At or below' },
+					{ id: 'eq', label: 'Equal to' },
+				],
+			},
+			{ type: 'number', id: 'level', label: 'Level in dB', default: 0, min: -1000, max: 1000 },
+		],
+		callback: async (feedback, context) => {
+			const target = await resolveAudioTarget(feedback.options, context, this)
+			const raw = this.shortcut_states[`${target}_volume`]
+			if (raw === undefined || raw === null || String(raw).trim() === '') return false
+			const value = Number(raw)
+			if (!Number.isFinite(value)) return false
+			switch (feedback.options.comparison) {
+				case 'gte':
+					return value >= feedback.options.level
+				case 'lte':
+					return value <= feedback.options.level
+				case 'eq':
+					return value === feedback.options.level
+				default:
+					return false
+			}
+		},
+	}
 	return feedbacks
 }
