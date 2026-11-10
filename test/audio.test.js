@@ -57,7 +57,25 @@ test('toggle requires a known state and feedback uses reported values', async ()
 	await actions.audio_switch.callback(action, context)
 	assert.deepEqual(sent, [['master_mute', 'false']])
 	const feedbacks = getFeedbacks.call(instance)
-	assert.equal(await feedbacks.audio_state.callback({ options: { source: 'master', property: 'mute' } }, context), true)
+	assert.equal(
+		await feedbacks.audio_state.callback({ options: { source: 'master', property: 'mute', state: 'active' } }, context),
+		true,
+	)
+	instance.shortcut_states.master_mute = false
+	assert.equal(
+		await feedbacks.audio_state.callback(
+			{ options: { source: 'master', property: 'mute', state: 'inactive' } },
+			context,
+		),
+		true,
+	)
+	assert.equal(
+		await feedbacks.audio_state.callback(
+			{ options: { source: 'input1', property: 'mute', state: 'inactive' } },
+			context,
+		),
+		false,
+	)
 	instance.shortcut_states.master_volume = -12
 	assert.equal(
 		await feedbacks.audio_volume.callback({ options: { source: 'master', comparison: 'gte', level: -15 } }, context),
@@ -73,6 +91,10 @@ test('rotary preset and variables are available for inputs', () => {
 	const { instance } = setup()
 	const rotary = getPresets.call(instance).audio_input1_volume_rotary
 	assert.equal(rotary.options.rotaryActions, true)
+	assert.equal(rotary.feedbacks[0].options.state, 'inactive')
+	const mute = getPresets.call(instance).audio_input1_mute_toggle
+	assert.equal(mute.feedbacks[0].options.state, 'inactive')
+	assert.equal(getPresets.call(instance).audio_input1_solo_toggle.feedbacks[0].options.state, 'active')
 	assert.equal(rotary.steps[0].rotate_left[0].options.amount, '-1')
 	assert.equal(rotary.steps[0].rotate_right[0].options.amount, '1')
 	assert.match(rotary.style.text, /\$\(tricaster:audio_input1_volume\)/)

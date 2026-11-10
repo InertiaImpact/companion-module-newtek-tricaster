@@ -1,4 +1,4 @@
-import { audioTargetOptions, resolveAudioTarget, audioStateIsOn } from './audio.js'
+import { audioTargetOptions, resolveAudioTarget, audioStateIsOn, audioStateIsKnown } from './audio.js'
 import { combineRgb } from '@companion-module/base'
 
 export function getFeedbacks() {
@@ -119,7 +119,7 @@ export function getFeedbacks() {
 
 	feedbacks.audio_state = {
 		type: 'boolean',
-		name: 'Audio: Mute, solo or talkback active',
+		name: 'Audio: Mute, solo or talkback state',
 		defaultStyle: { bgcolor: ColorRed },
 		options: [
 			...audioTargetOptions,
@@ -135,10 +135,22 @@ export function getFeedbacks() {
 					{ id: 'skype_talkback', label: 'Skype Talkback' },
 				],
 			},
+			{
+				type: 'dropdown',
+				id: 'state',
+				label: 'Highlight when',
+				default: 'inactive',
+				choices: [
+					{ id: 'inactive', label: 'Off (unmuted for mute)' },
+					{ id: 'active', label: 'On (muted for mute)' },
+				],
+			},
 		],
 		callback: async (feedback, context) => {
 			const target = await resolveAudioTarget(feedback.options, context, this)
-			return target ? audioStateIsOn(this.shortcut_states[`${target}_${feedback.options.property}`]) : false
+			const value = this.shortcut_states[`${target}_${feedback.options.property}`]
+			if (!target || !audioStateIsKnown(value)) return false
+			return audioStateIsOn(value) === (feedback.options.state === 'active')
 		},
 	}
 	feedbacks.audio_volume = {

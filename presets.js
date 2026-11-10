@@ -409,7 +409,7 @@ export function getPresets() {
 				? [
 						{
 							feedbackId: 'audio_state',
-							options: { source, property: feedback },
+							options: { source, property: feedback, state: feedback === 'mute' ? 'inactive' : 'active' },
 							style: { bgcolor: ColorRed, color: ColorWhite },
 						},
 					]
